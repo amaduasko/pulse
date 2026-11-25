@@ -35,22 +35,31 @@ function extractJson(text) {
   return JSON.parse(s.slice(a, b + 1));
 }
 
+// Shortens text at a word boundary, never mid-word.
+function clip(text, max) {
+  const s = String(text || "").replace(/\s+/g, " ").trim();
+  if (s.length <= max) return s;
+  const cut = s.slice(0, max - 1);
+  const end = cut.lastIndexOf(" ");
+  return (end > max / 2 ? cut.slice(0, end) : cut).replace(/[\s,;:.-]+$/, "") + "…";
+}
+
 function validPlan(raw) {
   const ex = Array.isArray(raw?.exercises) ? raw.exercises : [];
   const exercises = ex
     .map((e) => ({
-      name: String(e?.name || "").slice(0, 60).trim(),
+      name: clip(e?.name, 60),
       sets: Math.min(10, Math.max(1, parseInt(e?.sets) || 3)),
       reps: String(e?.reps ?? "10").slice(0, 20).trim() || "10",
       restSeconds: Math.min(300, Math.max(0, parseInt(e?.restSeconds) || 45)),
-      tip: String(e?.tip || "").slice(0, 140).trim(),
+      tip: clip(e?.tip, 140),
     }))
     .filter((e) => e.name)
     .slice(0, 8);
   if (exercises.length < 3) throw new Error("plan too short");
   return {
-    title: String(raw?.title || "Today's workout").slice(0, 60),
-    summary: String(raw?.summary || "").slice(0, 200),
+    title: clip(raw?.title, 60) || "Today's workout",
+    summary: clip(raw?.summary, 160),
     exercises,
   };
 }
@@ -62,7 +71,7 @@ async function makePlan(env, profile) {
         role: "system",
         content:
           "You are a certified personal trainer. Reply with JSON only, no prose: " +
-          '{"title": string (max 5 words), "summary": string (one sentence), "exercises": ' +
+          '{"title": string (max 5 words), "summary": string (one short sentence, at most 18 words), "exercises": ' +
           '[{"name": string, "sets": integer, "reps": string like "12" or "30 s", "restSeconds": integer, "tip": string (one short form cue)}]}. ' +
           "Use 5 to 7 safe exercises that fit the equipment and the session length.",
       },

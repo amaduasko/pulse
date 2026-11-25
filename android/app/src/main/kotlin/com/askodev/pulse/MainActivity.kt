@@ -1,0 +1,5 @@
+package com.askodev.pulse
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()
